@@ -24,7 +24,7 @@ export default function Tuner()
    
     const APIURL = "localhost:8001"; 
 
-    const {ErrorMessage, ShowError, UpdateError, RenderError} = useError(DefaultErrorMessage, false); 
+    const {ErrorMessage, ShowError, UpdateError } = useError(DefaultErrorMessage, false); 
 
     const uploadResume = async () => {
         setUploadState(1);
@@ -72,16 +72,14 @@ export default function Tuner()
     const onTuneHandler = async () => {
         if (resumeFileRef.current?.files?.length as number < 1)
         {
-            UpdateError("Please select a resume file.", true);
-            RenderError(3000);
+            UpdateError("Please select a resume file.", true, 3000);
 
             return;
         }      
         
         if (jobDescriptionRef.current?.value.length as number < 1)
         {
-            UpdateError("Please enter a job description.", true);
-            RenderError(3000);
+            UpdateError("Please enter a job description.", true, 3000);
 
             return;
         }

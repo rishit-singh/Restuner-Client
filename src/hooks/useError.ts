@@ -8,8 +8,7 @@ export interface Error
 {
     ErrorMessage: string,
     ShowError: boolean,
-    RenderError: (duration?: number) => void,
-    UpdateError: (errorMesage: string, showError: boolean) => void
+    UpdateError: (errorMesage: string, showError: boolean, duration?: number) => void
 }
 
 export function useError(errorMessage: string, showError: boolean): Error {
@@ -24,21 +23,16 @@ export function useError(errorMessage: string, showError: boolean): Error {
         ErrorMessage,
         ShowError,
         
-        RenderError(duration: number | undefined) 
-        {
-            setShowError(true);
-
-            if (duration !== undefined)
-                setTimeout(()=> { 
-                    setShowError(false);  
-                    setErrorMessage(DefaultErrorMessage);
-                }, duration);
-        },
-
-        UpdateError(_errorMessage: string, _showError: boolean)
+        UpdateError(_errorMessage: string, _showError: boolean, _duration: number | undefined)
         {
             setErrorMessage(_errorMessage);
             setShowError(_showError);
+
+            if (_duration !== undefined)
+                setTimeout(()=> { 
+                    setShowError(false);  
+                    setErrorMessage(DefaultErrorMessage);
+                }, _duration);
         } 
     };
 } 
