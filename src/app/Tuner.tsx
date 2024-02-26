@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea"
+import { useError } from "@/hooks/useError";
 import {useRef, useState, RefObject, useEffect} from "react";
 import Markdown from "react-markdown";
 
@@ -23,9 +24,7 @@ export default function Tuner()
    
     const APIURL = "localhost:8001"; 
 
-    const [showError, setShowError] = useState<boolean>();
-    
-    const [errorMessage, setErrorMessage] = useState<string>(DefaultErrorMessage);
+    const {ErrorMessage, ShowError, UpdateError, RenderError} = useError(DefaultErrorMessage, false); 
 
     const uploadResume = async () => {
         setUploadState(1);
@@ -73,16 +72,21 @@ export default function Tuner()
     const onTuneHandler = async () => {
         if (resumeFileRef.current?.files?.length as number < 1)
         {
-            setErrorMessage("Please select a resume file.");
-            setShowError(true);
+            UpdateError("Please select a resume file.", true);
+            RenderError(3000);
 
-            setTimeout(() => { 
-                setShowError(false); 
-                setErrorMessage(DefaultErrorMessage);
-            }, 3000);
-        }        
-        else  
-            await uploadResume();
+            return;
+        }      
+        
+        if (jobDescriptionRef.current?.value.length as number < 1)
+        {
+            UpdateError("Please enter a job description.", true);
+            RenderError(3000);
+
+            return;
+        }
+        
+        await uploadResume();
     };
 
     return (<>
@@ -92,7 +96,6 @@ export default function Tuner()
                     <Markdown>
                         {output} 
                     </Markdown> 
-
                 </div>
             </div>
             <div className="flex flex-col items-center p-12 gap-5">
@@ -106,18 +109,17 @@ export default function Tuner()
                     <div className="flex flex-row gap-3 items-center p-0">
                         <Label htmlFor="resume">Resume: </Label>
                         <Input ref={resumeFileRef} 
-                                type="file"
-                                className="text-black bg-white" hidden/>
+                            type="file"
+                            className="text-black bg-white" hidden />
                     </div>
                 </div>
 
-                <Conditional Condition={showError as boolean}>
+                <Conditional Condition={ShowError as boolean}>
                     <Alert variant={"destructive"} >
                         <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>{errorMessage}</AlertDescription>
+                        <AlertDescription>{ErrorMessage}</AlertDescription>
                     </Alert>
                 </Conditional>
-
             </div>
         </div>
     </>);    
