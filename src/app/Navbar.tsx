@@ -1,4 +1,4 @@
-export default function Navbar({} : {})
+export default function Navbar()
 {
     return (<>
         <div className="flex flex-row bg-[#2F2F2F]">

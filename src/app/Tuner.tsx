@@ -1,6 +1,6 @@
 "use client"
 
-import Conditional from "@/components/ui/Conditional";
+import Conditional from "@/components/util/Conditional";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,18 @@ import Markdown from "react-markdown";
 
 const DefaultErrorMessage: string = "Unknown error occured";
 
+type BotSession = {
+    ID: string, 
+    State: number
+};
+
 export default function Tuner()
 {
     const resumeFileRef: RefObject<HTMLInputElement> = useRef<HTMLInputElement>(null);
 
     const jobDescriptionRef: RefObject<HTMLTextAreaElement> = useRef<HTMLTextAreaElement>(null);
+    
+    const followUpPromptRef: RefObject<HTMLTextAreaElement> = useRef<HTMLTextAreaElement>(null); 
 
     const [output, setOutput] = useState<string>("Select a resume and give me a job description.");
 
@@ -24,40 +31,66 @@ export default function Tuner()
    
     const APIURL = "localhost:8001"; 
 
-    const {ErrorMessage, ShowError, UpdateError } = useError(DefaultErrorMessage, false); 
+    const { ErrorMessage, ShowError, UpdateError } = useError(DefaultErrorMessage, false); 
+
+    const [session, setSession] = useState<BotSession>();
+
+    const [showFollowUp, setShowFollowUp] = useState<boolean>(false);
+
 
     const uploadResume = async () => {
-        setUploadState(1);
-        setOutput("Uploding resume");
-
         const formData: FormData = new FormData();
 
-        formData.append("resume", (resumeFileRef.current?.files as FileList)[0]);
+        const resume = (resumeFileRef.current?.files as FileList)[0];
+
+        formData.append("resume", resume);
         formData.append("job_description", jobDescriptionRef.current?.value as string);
 
-        const response = await fetch(`http://${APIURL}/upload`, {
+        setOutput(`Uploading ${resume.name}`);
+
+        const response = await (await fetch(`http://${APIURL}/upload`, {
             method: "post",
             body: formData 
-        }); 
+        })).json() as unknown as { State: number, SessionID: string }; 
 
-        setUploadState(2); 
-    }; 
+        console.log(response.SessionID);
+        
+        setSession({
+            ID: response.SessionID,
+            State: response.State            
+        });
+    };
 
-    // if (uploadState == 1)
+    const Prompt = async () => {
+        const response = await (await fetch(`http://${APIURL}/prompt`, {
+            method: "post",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                "SessionID": session?.ID,
+                "Prompts": [followUpPromptRef.current?.value as string]
+            }) 
+        })).json() as unknown as { State: number, SessionID: string };
+   };
+
+    
     useEffect(() => {
         let interval: NodeJS.Timeout | undefined = undefined;
 
-        if (interval === undefined)
+        if (interval === undefined && session !== undefined)
             interval = setInterval(async () => {
-                const response = await (await fetch(`http://${APIURL}/output`, {})).json();
+                const response = await (await fetch(`http://${APIURL}/output/${session.ID}`, {})).json();
  
                 switch (response.State) {
                     case 0:
                         setOutput("Prompting");
+
                         break;
 
                     case 1:
                         setOutput(response.Output);
+                        setShowFollowUp(true);
 
                         break;
                 }
@@ -67,7 +100,7 @@ export default function Tuner()
             if (interval !== undefined)
                 clearInterval(interval);
         };
-    }, [uploadState]);
+    }, [uploadState, session]);
 
     const onTuneHandler = async () => {
         if (resumeFileRef.current?.files?.length as number < 1)
@@ -85,6 +118,16 @@ export default function Tuner()
         }
         
         await uploadResume();
+    };
+
+    const onPromptHandler = () => {
+        if (followUpPromptRef.current?.value.length as number < 1) 
+        {
+            UpdateError("Please enter a prompt.", true, 3000);
+            return;
+        }
+
+        Prompt();
     };
 
     return (<>
@@ -112,6 +155,16 @@ export default function Tuner()
                     </div>
                 </div>
 
+                <Conditional Condition={showFollowUp as boolean}>
+                    <div className="flex flex-col items-center p-12 gap-5">
+                        <Textarea ref={followUpPromptRef}
+                            placeholder={"Enter your prompt"}
+                            className="resize-none mt-[20px] h-[200px] w-[450px] bg-[#3B3B3B] rounded-lg p-5 text-[#D9D6D6]" />
+
+                        <Button variant={"secondary"} onClick={onPromptHandler}>Prompt</Button>
+                    </div>
+                </Conditional>
+                
                 <Conditional Condition={ShowError as boolean}>
                     <Alert variant={"destructive"} >
                         <AlertTitle>Error</AlertTitle>
@@ -122,4 +175,3 @@ export default function Tuner()
         </div>
     </>);    
 }
- 
